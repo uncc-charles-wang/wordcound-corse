@@ -2,6 +2,8 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <thread>
+#include <mutex>
 
 #include "Dictionary.cpp"
 #include "MyHashtable.cpp"
@@ -46,6 +48,15 @@ std::vector<std::vector<std::string>> tokenizeLyrics(const std::vector<std::stri
 }
 
 
+void worker_func(std::vector<std::string> filecontent, Dictionary<std::string, int>& the_dic, std::mutex& mu) {
+  for (auto & w : filecontent) {
+      mu.lock();
+      int count = the_dic.get(w);
+      ++count;
+      the_dic.set(w, count);
+      mu.unlock();
+    }
+}
 
 int main(int argc, char **argv)
 {
@@ -74,15 +85,23 @@ int main(int argc, char **argv)
   Dictionary<std::string, int>& dict = ht;
 
 
-
   // write code here
-
-
-
-
-
-
-
+  auto start =std::chrono::steady_clock::now();
+  
+  std::vector<std::thread> workers;
+  std::mutex mu;
+  
+  // For each file make a thread
+  for (auto & filecontent: wordmap) {
+    std::thread worker_thread (worker_func, filecontent, std::ref(dict), std::ref(mu));
+    workers.push_back(std::move(worker_thread));
+  }
+  
+  for (auto & t : workers) {
+      if (t.joinable()) {
+          t.join();
+    }
+  }
 
 
 
@@ -93,7 +112,11 @@ int main(int argc, char **argv)
       std::cout << it.first << " " << it.second << std::endl;
   }
   */
-
+  // Stop Timer
+  auto stop = std::chrono::steady_clock::now();
+  std::chrono::duration<double> time_elapsed = stop-start;
+  std::cerr << time_elapsed.count()<<"\n";
+  
   // Do not touch this, need for test cases
   std::cout << ht.get(testWord) << std::endl;
 
