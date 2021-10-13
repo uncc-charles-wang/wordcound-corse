@@ -1,0 +1,1 @@
+The slowdown for the coarse grain is due to the fact that the dictionary can only be accessed by one thread at a time becuase the mutex locks the dictionary.
